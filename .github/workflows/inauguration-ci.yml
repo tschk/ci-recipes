@@ -24,7 +24,7 @@ on:
         default: "stable"
         type: string
       build-command:
-        description: "Build command (use \$IN_BIN instead of bare 'in' — 'in' is a bash keyword)"
+        description: 'Build command (use $IN_BIN instead of bare "in" — "in" is a bash keyword)'
         required: false
         default: ""
         type: string
