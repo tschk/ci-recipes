@@ -24,7 +24,7 @@ on:
         default: "stable"
         type: string
       build-command:
-        description: "in build command to run (e.g. 'in build --path src/main.in')"
+        description: "Build command (use \$IN_BIN instead of bare 'in' — 'in' is a bash keyword)"
         required: false
         default: ""
         type: string
@@ -39,7 +39,7 @@ on:
         default: ""
         type: string
       run-clippy:
-        description: "Run clippy on the compiler itself"
+        description: "Run clippy/fmt on the compiler"
         required: false
         default: false
         type: boolean
@@ -48,6 +48,9 @@ on:
         required: false
         default: "extended"
         type: string
+
+env:
+  IN_BIN: ${{ github.workspace }}/${{ inputs.inauguration-path }}/in-cli/target/release/in
 
 jobs:
   ci:
@@ -68,8 +71,10 @@ jobs:
       - name: Build in compiler
         run: cargo build --release --bin in --features ${{ inputs.extra-build-features || 'extended' }}
         working-directory: ${{ inputs.inauguration-path }}/in-cli
-      - name: Add in to PATH
-        run: echo "$PWD/${{ inputs.inauguration-path }}/in-cli/target/release" >> "$GITHUB_PATH"
+      - name: Make IN_BIN available
+        run: |
+          echo "IN_BIN=${{ env.IN_BIN }}" >> "$GITHUB_ENV"
+          chmod +x "${{ env.IN_BIN }}"
       - name: Clippy
         if: inputs.run-clippy
         run: cargo clippy --all-targets --all-features --locked -- -D warnings
@@ -84,6 +89,10 @@ jobs:
       - name: Build project
         if: inputs.build-command != ''
         run: ${{ inputs.build-command }}
+        env:
+          IN_BIN: ${{ env.IN_BIN }}
       - name: Test
         if: inputs.test-command != ''
         run: ${{ inputs.test-command }}
+        env:
+          IN_BIN: ${{ env.IN_BIN }}
