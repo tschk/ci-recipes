@@ -51,6 +51,7 @@ on:
 
 env:
   IN_BIN: ${{ github.workspace }}/${{ inputs.inauguration-path }}/in-cli/target/release/in
+  IN: ${{ github.workspace }}/${{ inputs.inauguration-path }}/in-cli/target/release/in
   INAUGURATION_DIR: ${{ github.workspace }}/${{ inputs.inauguration-path }}
 
 jobs:
