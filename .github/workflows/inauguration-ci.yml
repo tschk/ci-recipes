@@ -3,169 +3,87 @@ name: Inauguration CI
 on:
   workflow_call:
     inputs:
+      inauguration-repo:
+        description: "GitHub repo with the in compiler"
+        required: false
+        default: "tschk/inauguration"
+        type: string
+      inauguration-ref:
+        description: "Git ref for the compiler"
+        required: false
+        default: "master"
+        type: string
+      inauguration-path:
+        description: "Checkout path for compiler"
+        required: false
+        default: "inauguration"
+        type: string
       rust-version:
         description: "Rust toolchain"
         required: false
         default: "stable"
         type: string
-      in-cli-features:
-        description: "Cargo features for in-cli"
+      build-command:
+        description: "in build command to run (e.g. 'in build --path src/main.in')"
+        required: false
+        default: ""
+        type: string
+      test-command:
+        description: "Shell command to run after build"
+        required: false
+        default: ""
+        type: string
+      install-deps:
+        description: "APT packages to install (space-separated)"
+        required: false
+        default: ""
+        type: string
+      run-clippy:
+        description: "Run clippy on the compiler itself"
+        required: false
+        default: false
+        type: boolean
+      extra-build-features:
+        description: "Cargo features for compiler build"
         required: false
         default: "extended"
         type: string
-      run-jit-conformance:
-        description: "Run JIT conformance (macOS only)"
-        required: false
-        default: true
-        type: boolean
-      run-polyglot-samples:
-        description: "Run polyglot language samples"
-        required: false
-        default: true
-        type: boolean
-      run-self-host:
-        description: "Self-host compilation test"
-        required: false
-        default: true
-        type: boolean
-      run-protocol-models:
-        description: "Check generated protocol models"
-        required: false
-        default: true
-        type: boolean
 
 jobs:
-  in-cli:
-    name: in-cli (fmt/clippy/test)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-version }}
-          components: clippy, rustfmt
-      - name: Format
-        run: cargo fmt --check
-        working-directory: in-cli
-      - name: Clippy
-        run: cargo clippy --all-targets --all-features --locked -- -D warnings
-        working-directory: in-cli
-      - name: Test
-        run: cargo test --features ${{ inputs.in-cli-features || 'default' }}
-        working-directory: in-cli
-
-  rust-driver:
-    name: rust-driver (hybrid pipeline)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-version }}
-          components: clippy, rustfmt
-      - name: Format
-        run: cargo fmt --check --all
-        working-directory: compiler/rust-driver
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-        working-directory: compiler/rust-driver
-      - name: Test hybrid-cli
-        run: cargo test -p hybrid-cli
-        working-directory: compiler/rust-driver
-
-  hybrid-libs:
-    name: Hybrid library crates
+  ci:
+    name: Inauguration CI
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-version }}
-      - name: Test hybrid crates
-        run: cargo test -p hybrid-pipeline -p hybrid-sil -p hybrid-core -p hybrid-scheduler
-        working-directory: compiler/rust-driver
-
-  protocol-models:
-    if: inputs.run-protocol-models
-    name: Protocol models
-    runs-on: ubuntu-latest
-    steps:
       - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.inauguration-repo }}
+          ref: ${{ inputs.inauguration-ref }}
+          path: ${{ inputs.inauguration-path }}
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.rust-version }}
-      - name: Build protocol-gen
-        run: cargo build --bin protocol-gen
-        working-directory: in-cli
-      - name: Add to PATH
-        run: echo "$PWD/target/debug" >> "$GITHUB_PATH"
-        working-directory: in-cli
-      - name: Check generated models
-        run: ./scripts/check-protocol-models.sh
-
-  jit-conformance:
-    if: inputs.run-jit-conformance
-    name: JIT conformance
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-version }}
-      - name: Install rust-src
-        run: rustup component add rust-src
-      - name: Build in binary
-        run: cargo build --release --bin in --features ${{ inputs.in-cli-features || 'extended' }}
-        working-directory: in-cli
-      - name: Add to PATH
-        run: echo "$PWD/in-cli/target/release" >> "$GITHUB_PATH"
-      - name: Run conformance suite
-        run: ./scripts/run-conformance.sh
-
-  polyglot-samples:
-    if: inputs.run-polyglot-samples
-    name: Polyglot samples
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-version }}
-      - name: Install rust-src
-        run: rustup component add rust-src
-      - name: Build in binary
-        run: cargo build --release --bin in --features ${{ inputs.in-cli-features || 'extended' }}
-        working-directory: in-cli
-      - name: Add to PATH
-        run: echo "$PWD/in-cli/target/release" >> "$GITHUB_PATH"
-      - name: in build (.in sample)
-        run: ./scripts/check-in-lang-sample.sh
-      - name: in build (.icore sample)
-        run: ./scripts/check-icore-sample.sh
-      - name: in build (Swift sample)
-        run: ./scripts/check-native-subset-sample.sh
-
-  self-host:
-    if: inputs.run-self-host
-    name: Self-host
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.rust-version }}
-      - name: Install rust-src
-        run: rustup component add rust-src
-      - name: Build in binary
-        run: cargo build --release --bin in --features ${{ inputs.in-cli-features || 'extended' }}
-        working-directory: in-cli
-      - name: Add to PATH
-        run: echo "$PWD/in-cli/target/release" >> "$GITHUB_PATH"
-      - name: Self-host compile
-        run: |
-          IN=./in-cli/target/release/in
-          echo "=== Self-host: compile in-cli/src/main.rs ==="
-          "$IN" build --path in-cli/src/main.rs --module-id InCli --verbose
-      - name: Check diff whitespace
-        run: git diff --check
+          components: ${{ inputs.run-clippy && 'clippy, rustfmt' || '' }}
+      - name: Build in compiler
+        run: cargo build --release --bin in --features ${{ inputs.extra-build-features || 'extended' }}
+        working-directory: ${{ inputs.inauguration-path }}/in-cli
+      - name: Add in to PATH
+        run: echo "$PWD/${{ inputs.inauguration-path }}/in-cli/target/release" >> "$GITHUB_PATH"
+      - name: Clippy
+        if: inputs.run-clippy
+        run: cargo clippy --all-targets --all-features --locked -- -D warnings
+        working-directory: ${{ inputs.inauguration-path }}/in-cli
+      - name: Format
+        if: inputs.run-clippy
+        run: cargo fmt --check
+        working-directory: ${{ inputs.inauguration-path }}/in-cli
+      - name: Install dependencies
+        if: inputs.install-deps != ''
+        run: sudo apt-get update && sudo apt-get install -y ${{ inputs.install-deps }}
+      - name: Build project
+        if: inputs.build-command != ''
+        run: ${{ inputs.build-command }}
+      - name: Test
+        if: inputs.test-command != ''
+        run: ${{ inputs.test-command }}

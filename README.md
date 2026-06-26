@@ -1,81 +1,84 @@
 # ci-recipes
 
-Reusable GitHub Actions workflows for `tschk` projects.
+Reusable GitHub Actions workflows for projects using the Inauguration compiler.
 
-## Workflows
+## Generic Inauguration CI
 
-| Workflow | What it does | Who uses it |
-|----------|-------------|-------------|
-| `inauguration-ci.yml` | Build + test + JIT conformance + self-host for the compiler | [`inauguration`](https://github.com/tschk/inauguration) |
-| `space-ci.yml` | Compile kernel with `in`, QEMU boot check, SCI validation | [`space`](https://github.com/tschk/space) |
-| `rust-ci.yml` | Generic fmt → clippy → test | Any Rust project |
-
----
-
-## Inauguration CI
-
-Canonical CI for the [inauguration](https://github.com/tschk/inauguration) compiler.
-Covers fmt, clippy, test, protocol model generation, JIT conformance,
-polyglot samples, self-hosting, and hybrid library crates.
+A single workflow for ANY project that uses the `in` compiler.
+Checks out the compiler, builds `in`, runs your `in build` command, and optionally runs tests.
 
 ```yaml
 jobs:
   ci:
     uses: tschk/ci-recipes/.github/workflows/inauguration-ci.yml@master
     with:
-      rust-version: "stable"
-      in-cli-features: "extended"
-      run-jit-conformance: true
-      run-polyglot-samples: true
-      run-self-host: true
-      run-protocol-models: true
+      build-command: "in build --path src/main.in"
+      test-command: "cargo test"
 ```
 
-### Inputs
-
-| Input | Default | Description |
-|-------|---------|-------------|
-| `rust-version` | `stable` | Rust toolchain |
-| `in-cli-features` | `extended` | Cargo features for in-cli |
-| `run-jit-conformance` | `true` | JIT conformance (macOS, aarch64) |
-| `run-polyglot-samples` | `true` | Polyglot language samples |
-| `run-self-host` | `true` | Self-host compiler compilation |
-| `run-protocol-models` | `true` | Protocol model generation check |
-
----
-
-## Space CI
-
-CI for projects that use the `in` compiler to build `.in` source code.
-Checks out [inauguration](https://github.com/tschk/inauguration), builds the
-`in` binary, compiles the project's `.in` kernel, and runs QEMU boot tests.
+### Minimal — just build `in` and run a command
 
 ```yaml
 jobs:
   ci:
-    uses: tschk/ci-recipes/.github/workflows/space-ci.yml@master
+    uses: tschk/ci-recipes/.github/workflows/inauguration-ci.yml@master
     with:
-      inauguration-ref: master
-      qemu-test: true
-      sci-check: true
+      build-command: "in build --path kernel/kernel-root.in --module-id MyProject"
 ```
 
-### Inputs
+### With QEMU/system tests
+
+```yaml
+jobs:
+  ci:
+    uses: tschk/ci-recipes/.github/workflows/inauguration-ci.yml@master
+    with:
+      build-command: "in build --path src/main.in"
+      test-command: |
+        bash scripts/check-boot.sh
+        bash scripts/check-integration.sh
+      install-deps: "qemu-system-x86-64 nasm"
+```
+
+### With compiler clippy/fmt checks
+
+```yaml
+jobs:
+  ci:
+    uses: tschk/ci-recipes/.github/workflows/inauguration-ci.yml@master
+    with:
+      build-command: "in build --path src/main.in"
+      run-clippy: true
+```
+
+### All inputs
 
 | Input | Default | Description |
 |-------|---------|-------------|
-| `inauguration-ref` | `master` | Git ref for inauguration checkout |
-| `inauguration-path` | `inauguration` | Relative checkout path |
+| `inauguration-repo` | `tschk/inauguration` | GitHub repo with the compiler |
+| `inauguration-ref` | `master` | Git ref for the compiler |
+| `inauguration-path` | `inauguration` | Checkout path for compiler source |
 | `rust-version` | `stable` | Rust toolchain |
-| `qemu-test` | `true` | QEMU boot verification |
-| `sci-check` | `true` | SCI metadata validation |
-| `run-network-test` | `false` | Network driver test |
+| `build-command` | `""` | `in build` command to run |
+| `test-command` | `""` | Shell command to run after build |
+| `install-deps` | `""` | APT packages (space-separated) |
+| `run-clippy` | `false` | Run clippy/fmt on the compiler |
+| `extra-build-features` | `extended` | Cargo features for compiler build |
 
----
+### How it works
+
+1. Checks out your project (the calling repo)
+2. Checks out the `in` compiler from `inauguration-repo` at `inauguration-ref`
+3. Builds the `in` binary with `cargo build --release`
+4. Adds `in` to `$PATH`
+5. Optionally runs `run-clippy` (clippy + fmt on compiler)
+6. Installs APT deps if `install-deps` is set
+7. Runs `build-command` (anything, typically `in build ...`)
+8. Runs `test-command` (anything, typically test scripts)
 
 ## Rust CI
 
-Generic Rust project CI.
+Generic Rust fmt → clippy → test for non-Inauguration Rust projects.
 
 ```yaml
 jobs:
