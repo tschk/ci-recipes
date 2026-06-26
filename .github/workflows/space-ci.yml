@@ -4,35 +4,32 @@ on:
   workflow_call:
     inputs:
       inauguration-ref:
-        description: "Git ref for the inauguration compiler"
         required: false
         default: "master"
         type: string
       inauguration-path:
-        description: "Relative path for inauguration checkout"
         required: false
         default: "inauguration"
         type: string
       rust-version:
-        description: "Rust toolchain"
         required: false
         default: "stable"
         type: string
       qemu-test:
-        description: "Run QEMU boot verification"
         required: false
         default: true
         type: boolean
       sci-check:
-        description: "Validate SCI component metadata"
         required: false
         default: true
         type: boolean
       run-network-test:
-        description: "Run network driver test"
         required: false
         default: false
         type: boolean
+
+env:
+  IN_CLI: ${{ inputs.inauguration-path }}/in-cli
 
 jobs:
   build-compiler:
@@ -46,18 +43,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.rust-version }}
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: ${{ inputs.inauguration-path }}
       - name: Build in binary
         run: cargo build --release --bin in --features extended
-        working-directory: ${{ inputs.inauguration-path }}
+        working-directory: ${{ env.IN_CLI }}
       - name: Upload in binary
         uses: actions/upload-artifact@v4
         with:
           name: in-binary
-          path: ${{ inputs.inauguration-path }}/target/release/in
+          path: ${{ env.IN_CLI }}/target/release/in
           retention-days: 1
 
   compile-kernel:
@@ -73,20 +66,19 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.rust-version }}
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
+      - name: Download in binary
+        uses: actions/download-artifact@v4
         with:
-          workspaces: ${{ inputs.inauguration-path }}
-      - name: Build in binary
-        run: cargo build --release --bin in --features extended
-        working-directory: ${{ inputs.inauguration-path }}
+          name: in-binary
+          path: ${{ env.IN_CLI }}/target/release
+      - name: Make in executable
+        run: chmod +x ${{ env.IN_CLI }}/target/release/in
       - name: Add in to PATH
-        run: echo "$PWD/${{ inputs.inauguration-path }}/target/release" >> "$GITHUB_PATH"
+        run: echo "$PWD/${{ env.IN_CLI }}/target/release" >> "$GITHUB_PATH"
       - name: Compile kernel
         run: |
           mkdir -p target
           in build --path kernel/kernel-root.in --module-id SpaceKernel --verbose
-        working-directory: .
 
   qemu-boot:
     if: inputs.qemu-test
@@ -102,15 +94,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.rust-version }}
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
+      - name: Download in binary
+        uses: actions/download-artifact@v4
         with:
-          workspaces: ${{ inputs.inauguration-path }}
-      - name: Build in binary
-        run: cargo build --release --bin in --features extended
-        working-directory: ${{ inputs.inauguration-path }}
+          name: in-binary
+          path: ${{ env.IN_CLI }}/target/release
+      - name: Make in executable
+        run: chmod +x ${{ env.IN_CLI }}/target/release/in
       - name: Add in to PATH
-        run: echo "$PWD/${{ inputs.inauguration-path }}/target/release" >> "$GITHUB_PATH"
+        run: echo "$PWD/${{ env.IN_CLI }}/target/release" >> "$GITHUB_PATH"
       - name: Install QEMU
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86-64 nasm clang
       - name: Run QEMU boot check
@@ -130,15 +122,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.rust-version }}
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
+      - name: Download in binary
+        uses: actions/download-artifact@v4
         with:
-          workspaces: ${{ inputs.inauguration-path }}
-      - name: Build in binary
-        run: cargo build --release --bin in --features extended
-        working-directory: ${{ inputs.inauguration-path }}
+          name: in-binary
+          path: ${{ env.IN_CLI }}/target/release
+      - name: Make in executable
+        run: chmod +x ${{ env.IN_CLI }}/target/release/in
       - name: Add in to PATH
-        run: echo "$PWD/${{ inputs.inauguration-path }}/target/release" >> "$GITHUB_PATH"
+        run: echo "$PWD/${{ env.IN_CLI }}/target/release" >> "$GITHUB_PATH"
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y nasm clang
       - name: Validate SCI metadata
@@ -158,15 +150,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ inputs.rust-version }}
-      - name: Cache Cargo
-        uses: Swatinem/rust-cache@v2
+      - name: Download in binary
+        uses: actions/download-artifact@v4
         with:
-          workspaces: ${{ inputs.inauguration-path }}
-      - name: Build in binary
-        run: cargo build --release --bin in --features extended
-        working-directory: ${{ inputs.inauguration-path }}
+          name: in-binary
+          path: ${{ env.IN_CLI }}/target/release
+      - name: Make in executable
+        run: chmod +x ${{ env.IN_CLI }}/target/release/in
       - name: Add in to PATH
-        run: echo "$PWD/${{ inputs.inauguration-path }}/target/release" >> "$GITHUB_PATH"
+        run: echo "$PWD/${{ env.IN_CLI }}/target/release" >> "$GITHUB_PATH"
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y qemu-system-x86-64 nasm clang
       - name: Run network test
