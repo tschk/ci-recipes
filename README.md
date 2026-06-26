@@ -11,7 +11,7 @@ polyglot samples, self-hosting, and hybrid library crates.
 ```yaml
 jobs:
   ci:
-    uses: tschk/ci-recipes/.github/workflows/inauguration-ci.yml@main
+    uses: tschk/ci-recipes/.github/workflows/inauguration-ci.yml@master
     with:
       rust-version: "stable"
       in-cli-features: "extended"
@@ -51,7 +51,7 @@ Generic Rust project CI with fmt, clippy, and test.
 ```yaml
 jobs:
   ci:
-    uses: tschk/ci-recipes/.github/workflows/rust-ci.yml@main
+    uses: tschk/ci-recipes/.github/workflows/rust-ci.yml@master
     with:
       workspace: "."
       features: ""
