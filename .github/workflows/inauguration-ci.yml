@@ -71,10 +71,10 @@ jobs:
       - name: Build in compiler
         run: cargo build --release --bin in --features ${{ inputs.extra-build-features || 'extended' }}
         working-directory: ${{ inputs.inauguration-path }}/in-cli
-      - name: Make IN_BIN available
+      - name: Add in to PATH
         run: |
-          echo "IN_BIN=${{ env.IN_BIN }}" >> "$GITHUB_ENV"
-          chmod +x "${{ env.IN_BIN }}"
+          echo "${{ github.workspace }}/${{ inputs.inauguration-path }}/in-cli/target/release" >> "$GITHUB_PATH"
+          echo "${{ env.IN_BIN }}"
       - name: Clippy
         if: inputs.run-clippy
         run: cargo clippy --all-targets --all-features --locked -- -D warnings
@@ -89,10 +89,6 @@ jobs:
       - name: Build project
         if: inputs.build-command != ''
         run: ${{ inputs.build-command }}
-        env:
-          IN_BIN: ${{ env.IN_BIN }}
       - name: Test
         if: inputs.test-command != ''
         run: ${{ inputs.test-command }}
-        env:
-          IN_BIN: ${{ env.IN_BIN }}
