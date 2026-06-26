@@ -16,14 +16,32 @@ jobs:
       test-command: "cargo test"
 ```
 
-### Minimal — just build `in` and run a command
+### Minimal — build project with `in`
+
+> `in` is a bash keyword (`case...in...esac`). Use `command in` to bypass it.
 
 ```yaml
 jobs:
   ci:
     uses: tschk/ci-recipes/.github/workflows/inauguration-ci.yml@master
     with:
-      build-command: "in build --path kernel/kernel-root.in --module-id MyProject"
+      build-command: "command in build --path src/main.in"
+```
+
+### Multi-step build (nasm + in compile)
+
+```yaml
+jobs:
+  ci:
+    uses: tschk/ci-recipes/.github/workflows/inauguration-ci.yml@master
+    with:
+      install-deps: "nasm"
+      build-command: |
+        command nasm -f bin boot/multiboot.asm -o /tmp/trampoline.bin
+        command in compile --path kernel/kernel-root.in --entry kernel_entry --emit boot \
+          --trampoline /tmp/trampoline.bin \
+          --target native --target-triple x86_64-unknown-none --linkage static-lib \
+          --out /tmp/kernel.bin
 ```
 
 ### With QEMU/system tests
@@ -33,7 +51,8 @@ jobs:
   ci:
     uses: tschk/ci-recipes/.github/workflows/inauguration-ci.yml@master
     with:
-      build-command: "in build --path src/main.in"
+      build-command: |
+        command in build --path src/main.in
       test-command: |
         bash scripts/check-boot.sh
         bash scripts/check-integration.sh
@@ -47,7 +66,7 @@ jobs:
   ci:
     uses: tschk/ci-recipes/.github/workflows/inauguration-ci.yml@master
     with:
-      build-command: "in build --path src/main.in"
+      build-command: "command in build --path src/main.in"
       run-clippy: true
 ```
 
