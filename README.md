@@ -2,9 +2,19 @@
 
 Reusable GitHub Actions workflows for `tschk` projects.
 
+## Workflows
+
+| Workflow | What it does | Who uses it |
+|----------|-------------|-------------|
+| `inauguration-ci.yml` | Build + test + JIT conformance + self-host for the compiler | [`inauguration`](https://github.com/tschk/inauguration) |
+| `space-ci.yml` | Compile kernel with `in`, QEMU boot check, SCI validation | [`space`](https://github.com/tschk/space) |
+| `rust-ci.yml` | Generic fmt → clippy → test | Any Rust project |
+
+---
+
 ## Inauguration CI
 
-Canonical CI for the [inauguration](https://github.com/tschk/inauguration) compiler project.
+Canonical CI for the [inauguration](https://github.com/tschk/inauguration) compiler.
 Covers fmt, clippy, test, protocol model generation, JIT conformance,
 polyglot samples, self-hosting, and hybrid library crates.
 
@@ -32,21 +42,40 @@ jobs:
 | `run-self-host` | `true` | Self-host compiler compilation |
 | `run-protocol-models` | `true` | Protocol model generation check |
 
-### Jobs
+---
 
-| Job | Runner | What |
-|-----|--------|------|
-| `in-cli` | ubuntu | fmt → clippy → test |
-| `rust-driver` | ubuntu | fmt → clippy → test (hybrid-cli) |
-| `hybrid-libs` | ubuntu | test hybrid-pipeline, hybrid-sil, hybrid-core, hybrid-scheduler |
-| `protocol-models` | ubuntu | build protocol-gen, check generated models |
-| `jit-conformance` | macos | build `in` binary, run conformance suite (54 tests) |
-| `polyglot-samples` | macos | build `in` binary, test .in/.icore/Swift samples |
-| `self-host` | macos | JIT-compile compiler source, check diff |
+## Space CI
+
+CI for projects that use the `in` compiler to build `.in` source code.
+Checks out [inauguration](https://github.com/tschk/inauguration), builds the
+`in` binary, compiles the project's `.in` kernel, and runs QEMU boot tests.
+
+```yaml
+jobs:
+  ci:
+    uses: tschk/ci-recipes/.github/workflows/space-ci.yml@master
+    with:
+      inauguration-ref: master
+      qemu-test: true
+      sci-check: true
+```
+
+### Inputs
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `inauguration-ref` | `master` | Git ref for inauguration checkout |
+| `inauguration-path` | `inauguration` | Relative checkout path |
+| `rust-version` | `stable` | Rust toolchain |
+| `qemu-test` | `true` | QEMU boot verification |
+| `sci-check` | `true` | SCI metadata validation |
+| `run-network-test` | `false` | Network driver test |
+
+---
 
 ## Rust CI
 
-Generic Rust project CI with fmt, clippy, and test.
+Generic Rust project CI.
 
 ```yaml
 jobs:
