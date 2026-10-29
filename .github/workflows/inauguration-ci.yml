@@ -11,7 +11,7 @@ on:
       inauguration-ref:
         description: "Git ref for the compiler"
         required: false
-        default: "master"
+        default: "main"
         type: string
       inauguration-path:
         description: "Checkout path for compiler"
@@ -60,6 +60,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # A recipe that only builds the compiler tests nothing in the caller.
+      - name: Require a project command
+        if: inputs.build-command == '' && inputs.test-command == ''
+        run: |
+          echo "::error::Set build-command or test-command; otherwise this job only builds the compiler and tests nothing in this repository."
+          exit 1
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:

@@ -39,5 +39,7 @@ jobs:
         run: cargo clippy --all-targets --all-features --locked -- -D warnings
         working-directory: ${{ inputs.workspace }}
       - name: Test
-        run: cargo test --all-targets --features ${{ inputs.features || 'default' }}
+        env:
+          FEATURES: ${{ inputs.features }}
+        run: cargo test --all-targets ${FEATURES:+--features "$FEATURES"}
         working-directory: ${{ inputs.workspace }}
