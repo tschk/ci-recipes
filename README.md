@@ -5,14 +5,14 @@ Reusable GitHub Actions workflows for projects using the Inauguration compiler.
 ## Generic Inauguration CI
 
 A single workflow for ANY project that uses the `in` compiler.
-Checks out the compiler, builds `in`, runs your `in build` command, and optionally runs tests.
+Checks out the compiler, builds `in`, runs your build command (for example `command in build ...`), and optionally runs tests.
 
 ```yaml
 jobs:
   ci:
     uses: tschk/ci-recipes/.github/workflows/inauguration-ci.yml@master
     with:
-      build-command: "in build --path src/main.in"
+      build-command: "command in build --path src/main.in"
       test-command: "cargo test"
 ```
 
@@ -75,10 +75,10 @@ jobs:
 | Input | Default | Description |
 |-------|---------|-------------|
 | `inauguration-repo` | `tschk/inauguration` | GitHub repo with the compiler |
-| `inauguration-ref` | `master` | Git ref for the compiler |
+| `inauguration-ref` | `main` | Git ref for the compiler (pin a tag or commit SHA for reproducible builds) |
 | `inauguration-path` | `inauguration` | Checkout path for compiler source |
 | `rust-version` | `stable` | Rust toolchain |
-| `build-command` | `""` | `in build` command to run |
+| `build-command` | `""` | Project build command, e.g. `command in build ...` (set this, `test-command`, or both) |
 | `test-command` | `""` | Shell command to run after build |
 | `install-deps` | `""` | APT packages (space-separated) |
 | `run-clippy` | `false` | Run clippy/fmt on the compiler |
@@ -86,14 +86,15 @@ jobs:
 
 ### How it works
 
-1. Checks out your project (the calling repo)
-2. Checks out the `in` compiler from `inauguration-repo` at `inauguration-ref`
-3. Builds the `in` binary with `cargo build --release`
-4. Adds `in` to `$PATH`
-5. Optionally runs `run-clippy` (clippy + fmt on compiler)
-6. Installs APT deps if `install-deps` is set
-7. Runs `build-command` (anything, typically `in build ...`)
-8. Runs `test-command` (anything, typically test scripts)
+1. Fails if both `build-command` and `test-command` are empty, since the job would otherwise test nothing
+2. Checks out your project (the calling repo)
+3. Checks out the `in` compiler from `inauguration-repo` at `inauguration-ref`
+4. Builds the `in` binary with `cargo build --release`
+5. Adds `in` to `$PATH`
+6. Optionally runs `run-clippy` (clippy + fmt on compiler)
+7. Installs APT deps if `install-deps` is set
+8. Runs `build-command` (anything, typically `command in build ...`)
+9. Runs `test-command` (anything, typically test scripts)
 
 ## Rust CI
 
@@ -105,6 +106,6 @@ jobs:
     uses: tschk/ci-recipes/.github/workflows/rust-ci.yml@master
     with:
       workspace: "."
-      features: ""
+      features: ""        # optional; empty runs cargo test with the crate's default features
       rust-version: "stable"
 ```
